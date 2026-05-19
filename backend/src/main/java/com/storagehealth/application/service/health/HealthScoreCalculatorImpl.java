@@ -74,8 +74,11 @@ public class HealthScoreCalculatorImpl implements HealthScoreCalculator {
 
         overall = Math.min(100.0, Math.max(0.0, overall));
 
-        log.info("Health score: overall={:.1f}, dup={:.1f}, clutter={:.1f}, org={:.1f}",
-            overall, duplicateWasteScore, clutterScore, orgScore);
+        log.info("Health score: overall={}, dup={}, clutter={}, org={}",
+            String.format("%.1f", overall),
+            String.format("%.1f", duplicateWasteScore),
+            String.format("%.1f", clutterScore),
+            String.format("%.1f", orgScore));
 
         return StorageHealthScore.builder()
             .overallScore(overall)
