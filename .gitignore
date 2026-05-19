@@ -1,0 +1,40 @@
+# Maven build output
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Java compiled files
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# SQLite database (auto-created at runtime)
+*.db
+*.db-shm
+*.db-wal
+
+# Spring Boot dev tools restart file
+.reloadtrigger
