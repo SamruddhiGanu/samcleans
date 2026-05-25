@@ -7,6 +7,8 @@ import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Recommendations tab — shows actionable storage-cleanup suggestions
@@ -19,6 +21,8 @@ public class RecommendationsPanel {
     private TableView<RecommendationRow> table;
     private Label summaryLabel;
     private ComboBox<String> typeFilter;
+    private Long currentSessionId;
+    private TextField sessionField;
 
     public RecommendationsPanel() {
         root = new VBox(14);
@@ -31,7 +35,7 @@ public class RecommendationsPanel {
         table = buildTable();
         VBox.setVgrow(table, Priority.ALWAYS);
 
-        root.getChildren().addAll(buildTitle(), summaryLabel, buildToolbar(), table);
+        root.getChildren().addAll(buildTitle(), summaryLabel, buildToolbar(), buildActionToolbar(), table);
     }
 
     public VBox getRoot() { return root; }
@@ -49,7 +53,7 @@ public class RecommendationsPanel {
         ));
         typeFilter.setValue("ALL");
 
-        TextField sessionField = new TextField();
+        sessionField = new TextField();
         sessionField.setPromptText("Session ID");
         sessionField.setPrefWidth(100);
 
@@ -79,19 +83,66 @@ public class RecommendationsPanel {
             generateBtn, loadBtn);
     }
 
+    private HBox buildActionToolbar() {
+        Button analyzeBtn = new Button("📸  Analyze Images");
+        analyzeBtn.getStyleClass().add("btn-secondary");
+        analyzeBtn.setOnAction(e -> {
+            if (currentSessionId == null) { statusMsg("Load a session first."); return; }
+            statusMsg("Analyzing images (blur, color)...");
+            Thread.ofVirtual().start(() -> {
+                try {
+                    api.analyzeImages(currentSessionId);
+                    Platform.runLater(() -> statusMsg("Image analysis complete. Click Load to refresh."));
+                } catch (Exception ex) { Platform.runLater(() -> statusMsg("Error: " + ex.getMessage())); }
+            });
+        });
+
+        Button nearDupBtn = new Button("🖼️  Near Duplicates");
+        nearDupBtn.getStyleClass().add("btn-secondary");
+        nearDupBtn.setOnAction(e -> {
+            if (currentSessionId == null) { statusMsg("Load a session first."); return; }
+            statusMsg("Detecting near-duplicates...");
+            Thread.ofVirtual().start(() -> {
+                try {
+                    api.detectNearDuplicates(currentSessionId);
+                    Platform.runLater(() -> statusMsg("Near-duplicate detection complete. Click Load to refresh."));
+                } catch (Exception ex) { Platform.runLater(() -> statusMsg("Error: " + ex.getMessage())); }
+            });
+        });
+
+        Button cleanupBtn = new Button("🧹  Add Selected to Cleanup");
+        cleanupBtn.getStyleClass().add("btn-primary");
+        cleanupBtn.setOnAction(e -> handleAddToCleanup());
+
+        HBox bar = new HBox(10, analyzeBtn, nearDupBtn, new Region(), cleanupBtn);
+        HBox.setHgrow(bar.getChildren().get(2), Priority.ALWAYS);
+        return bar;
+    }
+
+    private void statusMsg(String msg) {
+        summaryLabel.setText(msg);
+    }
+
     @SuppressWarnings("unchecked")
     private TableView<RecommendationRow> buildTable() {
         TableView<RecommendationRow> tv = new TableView<>();
         tv.setPlaceholder(new Label("No recommendations loaded."));
         tv.getStyleClass().add("data-table");
 
+        TableColumn<RecommendationRow, Boolean> selCol = new TableColumn<>("");
+        selCol.setCellValueFactory(new PropertyValueFactory<>("selected"));
+        selCol.setCellFactory(tc -> new javafx.scene.control.cell.CheckBoxTableCell<>());
+        selCol.setEditable(true);
+        selCol.setPrefWidth(40);
+        tv.setEditable(true);
+
         TableColumn<RecommendationRow, String> typeCol = new TableColumn<>("Type");
         typeCol.setCellValueFactory(new PropertyValueFactory<>("type"));
-        typeCol.setPrefWidth(160);
+        typeCol.setPrefWidth(140);
 
         TableColumn<RecommendationRow, String> fileCol = new TableColumn<>("File");
         fileCol.setCellValueFactory(new PropertyValueFactory<>("fileName"));
-        fileCol.setPrefWidth(220);
+        fileCol.setPrefWidth(200);
 
         TableColumn<RecommendationRow, String> confCol = new TableColumn<>("Confidence");
         confCol.setCellValueFactory(new PropertyValueFactory<>("confidence"));
@@ -103,14 +154,34 @@ public class RecommendationsPanel {
 
         TableColumn<RecommendationRow, String> explCol = new TableColumn<>("Explanation");
         explCol.setCellValueFactory(new PropertyValueFactory<>("explanation"));
-        HBox.setHgrow(explCol, Priority.ALWAYS);
-        explCol.setPrefWidth(340);
+        explCol.setPrefWidth(320);
 
-        tv.getColumns().addAll(typeCol, fileCol, confCol, sizeCol, explCol);
+        tv.getColumns().addAll(selCol, typeCol, fileCol, confCol, sizeCol, explCol);
         return tv;
     }
 
+    private void handleAddToCleanup() {
+        List<Long> selectedFileIds = table.getItems().stream()
+            .filter(RecommendationRow::isSelected)
+            .map(RecommendationRow::getFileId)
+            .collect(Collectors.toList());
+        
+        if (selectedFileIds.isEmpty()) {
+            statusMsg("No recommendations selected.");
+            return;
+        }
+
+        statusMsg("Initiating cleanup for " + selectedFileIds.size() + " files...");
+        Thread.ofVirtual().start(() -> {
+            try {
+                api.initiateCleanup(selectedFileIds);
+                Platform.runLater(() -> statusMsg("Added to cleanup. Switch to Cleanup tab."));
+            } catch (Exception ex) { Platform.runLater(() -> statusMsg("Error: " + ex.getMessage())); }
+        });
+    }
+
     private void loadRecommendations(Long sessionId) {
+        this.currentSessionId = sessionId;
         summaryLabel.setText("Loading…");
         String type = "ALL".equals(typeFilter.getValue()) ? null : typeFilter.getValue();
         Thread.ofVirtual().start(() -> {

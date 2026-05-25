@@ -27,10 +27,13 @@ public class HashingServiceImpl implements HashingService {
     private static final int BUFFER_SIZE = 8_192;
 
     private final FileHashRepository hashRepository;
+    private final com.storagehealth.application.service.image.PerceptualHashService phashService;
 
     @Autowired
-    public HashingServiceImpl(FileHashRepository hashRepository) {
+    public HashingServiceImpl(FileHashRepository hashRepository,
+                              com.storagehealth.application.service.image.PerceptualHashService phashService) {
         this.hashRepository = hashRepository;
+        this.phashService = phashService;
     }
 
     // ---------------------------------------------------------------
@@ -41,11 +44,7 @@ public class HashingServiceImpl implements HashingService {
     public String computeHash(Path filePath, HashType hashType) throws IOException {
         return switch (hashType) {
             case SHA256 -> sha256Hash(filePath);
-            case DPHASH -> dPhash(filePath);
-            case PHASH  -> {
-                log.warn("pHash not yet implemented (Phase 3). Returning empty string for: {}", filePath);
-                yield "";
-            }
+            case DPHASH, PHASH -> phashService.computeHash(filePath);
         };
     }
 
@@ -63,7 +62,6 @@ public class HashingServiceImpl implements HashingService {
 
             return bytesToHex(digest.digest());
         } catch (NoSuchAlgorithmException e) {
-            // SHA-256 is guaranteed by the Java spec — this should never happen.
             log.error("SHA-256 algorithm not available on this JVM", e);
             throw new RuntimeException("SHA-256 unavailable", e);
         }
@@ -71,10 +69,7 @@ public class HashingServiceImpl implements HashingService {
 
     @Override
     public String dPhash(Path filePath) throws IOException {
-        // Difference hash requires image decoding (OpenCV / imgscalr).
-        // Implemented in Phase 3 once the image-processing dependency is added.
-        throw new UnsupportedOperationException(
-            "dPhash is not yet implemented. Scheduled for Phase 3.");
+        return phashService.computeHash(filePath);
     }
 
     // ---------------------------------------------------------------

@@ -75,11 +75,24 @@ public class DatabaseInitializer {
             runSqlFile(stmt, "db/migration/V1__initial_schema.sql");
 
             // V2 — importance_score column (Phase 2)
-            // Wrapped in try-catch because SQLite ALTER TABLE errors if column already exists
             try {
                 runSqlFile(stmt, "db/migration/V2__add_importance_score.sql");
             } catch (SQLException e) {
                 log.debug("V2 migration skipped (already applied): {}", e.getMessage());
+            }
+
+            // V3 — image analysis fields (Phase 3)
+            try {
+                runSqlFile(stmt, "db/migration/V3__add_image_analysis.sql");
+            } catch (SQLException e) {
+                log.debug("V3 migration skipped (already applied): {}", e.getMessage());
+            }
+
+            // V4 — cleanup session fields (Phase 4)
+            try {
+                runSqlFile(stmt, "db/migration/V4__add_cleanup_fields.sql");
+            } catch (SQLException e) {
+                log.debug("V4 migration skipped (already applied): {}", e.getMessage());
             }
 
             log.info("Database migrations applied successfully.");

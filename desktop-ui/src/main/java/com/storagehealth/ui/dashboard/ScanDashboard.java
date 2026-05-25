@@ -38,6 +38,7 @@ public class ScanDashboard {
     private Label dupValueLabel;
     private Label clutterValueLabel;
     private Label orgValueLabel;
+    private Long  currentSessionId;
 
     public ScanDashboard() {
         root = new VBox(18);
@@ -199,23 +200,24 @@ public class ScanDashboard {
 
         Thread.ofVirtual().start(() -> {
             try {
-                Long sessionId = api.startScan(path, "Dashboard Scan");
-                Platform.runLater(() -> setStatus("Scan running (session " + sessionId + ")", "status-active"));
+                currentSessionId = api.startScan(path, "Dashboard Scan");
+                Platform.runLater(() -> setStatus("Scan running (session " + currentSessionId + ")", "status-active"));
 
                 // Poll until complete
                 boolean done = false;
                 while (!done) {
                     Thread.sleep(2000);
-                    String status = api.getScanStatus(sessionId);
+                    String status = api.getScanStatus(currentSessionId);
                     done = "COMPLETED".equals(status) || "FAILED".equals(status) || "PAUSED".equals(status);
                 }
 
+                final Long finalSessionId = currentSessionId;
                 Platform.runLater(() -> {
                     setStatus("✔ Scan complete.", "status-ok");
                     startBtn.setDisable(false);
                     cancelBtn.setDisable(true);
                     progressBar.setVisible(false);
-                    refreshScores(sessionId);
+                    refreshScores(finalSessionId);
                 });
 
             } catch (Exception ex) {
@@ -230,7 +232,9 @@ public class ScanDashboard {
     }
 
     private void handleCancelScan() {
-        api.cancelScan(-1L); // best-effort
+        if (currentSessionId != null) {
+            api.cancelScan(currentSessionId);
+        }
         setStatus("Cancellation requested…", "status-warning");
         cancelBtn.setDisable(true);
     }

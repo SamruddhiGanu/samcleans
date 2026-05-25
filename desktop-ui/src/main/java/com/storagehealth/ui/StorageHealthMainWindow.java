@@ -75,9 +75,10 @@ public class StorageHealthMainWindow {
         Tab dashTab  = new Tab("📊  Dashboard",       new ScanDashboard().getRoot());
         Tab dupTab   = new Tab("🔁  Duplicates",       new DuplicateExplorer().getRoot());
         Tab recTab   = new Tab("💡  Recommendations",  new RecommendationsPanel().getRoot());
+        Tab clnTab   = new Tab("🗑️  Cleanup",          new com.storagehealth.ui.panels.CleanupPanel().getRoot());
         Tab setTab   = new Tab("⚙️  Settings",          new SettingsPanel().getRoot());
 
-        tabs.getTabs().addAll(dashTab, dupTab, recTab, setTab);
+        tabs.getTabs().addAll(dashTab, dupTab, recTab, clnTab, setTab);
         return tabs;
     }
 

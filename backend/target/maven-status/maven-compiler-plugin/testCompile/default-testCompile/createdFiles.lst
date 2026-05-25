@@ -1,6 +1,10 @@
 com\storagehealth\application\service\hashing\HashingServiceImplTest.class
 com\storagehealth\application\service\duplicate\DuplicateDetectorImplTest.class
+com\storagehealth\application\service\image\ImageAnalysisServiceImplTest.class
 com\storagehealth\application\service\scanner\FileScannerImplTest.class
 com\storagehealth\application\service\ranking\FileRankingServiceImplTest.class
-com\storagehealth\application\service\health\HealthScoreCalculatorImplTest.class
 com\storagehealth\application\service\recommendations\RecommendationEngineImplTest.class
+com\storagehealth\application\service\cleanup\CleanupServiceImplTest.class
+com\storagehealth\application\service\image\NearDuplicateDetectorImplTest.class
+com\storagehealth\application\service\image\PerceptualHashServiceImplTest.class
+com\storagehealth\application\service\health\HealthScoreCalculatorImplTest.class

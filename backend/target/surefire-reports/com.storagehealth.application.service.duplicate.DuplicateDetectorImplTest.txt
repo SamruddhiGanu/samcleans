@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.storagehealth.application.service.duplicate.DuplicateDetectorImplTest
--------------------------------------------------------------------------------
-Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.442 s -- in com.storagehealth.application.service.duplicate.DuplicateDetectorImplTest

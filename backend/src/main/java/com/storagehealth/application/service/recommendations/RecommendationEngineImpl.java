@@ -14,9 +14,12 @@ import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.storagehealth.application.service.image.ImageAnalysisService;
+import com.storagehealth.application.service.image.PerceptualHashService;
 
 /**
  * Generates actionable storage-cleanup recommendations by inspecting files in a scan session.
@@ -27,6 +30,8 @@ import java.util.stream.Collectors;
  *   <li>{@link RecommendationType#TEMP_FILE} — files with temporary extensions</li>
  *   <li>{@link RecommendationType#UNUSED_LARGE_FILE} — files &gt;500 MB not accessed for 1 year</li>
  *   <li>{@link RecommendationType#STALE_DOWNLOAD} — downloads not accessed for 3 months</li>
+ *   <li>{@link RecommendationType#BLURRY_IMAGE} — images with high blur score (Phase 3)</li>
+ *   <li>{@link RecommendationType#NEAR_DUPLICATE} — visually similar images (Phase 3)</li>
  * </ul>
  *
  * <p>Each recommendation avoids creating a duplicate DB record by checking for an existing
@@ -42,12 +47,18 @@ public class RecommendationEngineImpl implements RecommendationEngine {
 
     private final FileRepository fileRepository;
     private final RecommendationRepository recommendationRepository;
+    private final ImageAnalysisService imageAnalysisService;
+    private final PerceptualHashService perceptualHashService;
 
     @Autowired
     public RecommendationEngineImpl(FileRepository fileRepository,
-                                    RecommendationRepository recommendationRepository) {
+                                    RecommendationRepository recommendationRepository,
+                                    ImageAnalysisService imageAnalysisService,
+                                    PerceptualHashService perceptualHashService) {
         this.fileRepository           = fileRepository;
         this.recommendationRepository = recommendationRepository;
+        this.imageAnalysisService     = imageAnalysisService;
+        this.perceptualHashService    = perceptualHashService;
     }
 
     // ---------------------------------------------------------------
@@ -65,6 +76,8 @@ public class RecommendationEngineImpl implements RecommendationEngine {
         recommendTemporaryFiles(files);
         recommendUnusedLargeFiles(files);
         recommendStaleDownloads(files);
+        recommendBlurryImages(files);
+        detectNearDuplicates(files);
 
         log.info("Recommendation generation complete for session {}", session.getId());
     }
@@ -153,6 +166,57 @@ public class RecommendationEngineImpl implements RecommendationEngine {
             count++;
         }
         log.debug("Stale download recommendations: {}", count);
+    }
+
+    /** Images that appear blurry according to OpenCV Laplacian variance. */
+    private void recommendBlurryImages(List<FileEntity> files) {
+        int count = 0;
+        for (FileEntity file : files) {
+            if (file.getFileType() != FileType.IMAGE) continue;
+            if (exists(file, RecommendationType.BLURRY_IMAGE)) continue;
+
+            if (imageAnalysisService.isImageBlurry(Paths.get(file.getPath()))) {
+                save(file, RecommendationType.BLURRY_IMAGE,
+                    BigDecimal.valueOf(0.80),
+                    "Image appears blurry. Review for deletion.",
+                    file.getSizeBytes());
+                count++;
+            }
+        }
+        log.debug("Blurry image recommendations: {}", count);
+    }
+
+    /** Find visually similar images using perceptual hashing. */
+    private void detectNearDuplicates(List<FileEntity> files) {
+        List<FileEntity> images = files.stream()
+            .filter(f -> f.getFileType() == FileType.IMAGE)
+            .collect(Collectors.toList());
+
+        int count = 0;
+        // Simple O(n^2) check for small sets; for large sets, we'd use a better index or spatial hash
+        for (int i = 0; i < images.size(); i++) {
+            FileEntity f1 = images.get(i);
+            String h1 = perceptualHashService.computeHash(Paths.get(f1.getPath()));
+            if (h1 == null) continue;
+
+            for (int j = i + 1; j < images.size(); j++) {
+                FileEntity f2 = images.get(j);
+                if (exists(f2, RecommendationType.NEAR_DUPLICATE)) continue;
+
+                String h2 = perceptualHashService.computeHash(Paths.get(f2.getPath()));
+                if (h2 == null) continue;
+
+                int distance = perceptualHashService.hammingDistance(h1, h2);
+                if (distance >= 0 && distance <= 5) { // Threshold for near-duplicates
+                    save(f2, RecommendationType.NEAR_DUPLICATE,
+                        BigDecimal.valueOf(0.90),
+                        "Visually similar to: " + f1.getName() + " (Distance: " + distance + ")",
+                        f2.getSizeBytes());
+                    count++;
+                }
+            }
+        }
+        log.debug("Near-duplicate recommendations: {}", count);
     }
 
     // ---------------------------------------------------------------

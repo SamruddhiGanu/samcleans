@@ -61,8 +61,14 @@ public class FileEntity {
      * Computed by {@link com.storagehealth.application.service.ranking.FileRankingService}.
      * Range 0.0 (least important) – 1.0 (most important). Null until ranking has been run.
      */
-    @Column(name = "importance_score")
+    /** Phase 2: Importance ranking score (0.0 to 1.0) */
     private Double importanceScore;
+
+    /** Phase 3: Image analysis scores */
+    private Double blurScore;
+    private Double brightnessScore;
+    private Double colorfulnessScore;
+    private Boolean isBlurry;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "scan_session_id")

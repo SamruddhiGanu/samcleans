@@ -10,12 +10,14 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RecommendationRow {
     private Long   id;
+    private Long   fileId;
     private String type;
     private String fileName;
     private String filePath;
     private String confidence;
     private long   recoverableSpace;
     private String explanation;
+    private boolean selected;
 
     public String getRecoverableFormatted() {
         if (recoverableSpace < 1024) return recoverableSpace + " B";

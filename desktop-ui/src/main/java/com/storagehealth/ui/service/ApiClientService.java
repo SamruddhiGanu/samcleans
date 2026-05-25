@@ -115,12 +115,59 @@ public class ApiClientService {
         for (JsonNode r : root.path("content")) {
             rows.add(new RecommendationRow(
                 r.path("id").asLong(),
+                r.path("fileId").asLong(),
                 r.path("type").asText(),
                 r.path("fileName").asText(),
                 r.path("filePath").asText(),
                 String.format("%.0f%%", r.path("confidenceScore").asDouble(0) * 100),
                 r.path("recoverableSpace").asLong(0),
-                r.path("explanation").asText()
+                r.path("explanation").asText(),
+                false // selected
+            ));
+        }
+        return rows;
+    }
+
+    // ---------------------------------------------------------------
+    // Phase 3: Image Analysis API
+    // ---------------------------------------------------------------
+
+    public void analyzeImages(Long sessionId) throws Exception {
+        post("/api/images/analyze/" + sessionId, "");
+    }
+
+    public void detectNearDuplicates(Long sessionId) throws Exception {
+        post("/api/images/near-duplicates/" + sessionId, "");
+    }
+
+    // ---------------------------------------------------------------
+    // Phase 4: Cleanup API
+    // ---------------------------------------------------------------
+
+    public void initiateCleanup(List<Long> fileIds) throws Exception {
+        if (fileIds == null || fileIds.isEmpty()) return;
+        String body = json.writeValueAsString(Map.of("fileIds", fileIds));
+        post("/api/cleanup/initiate", body);
+    }
+
+    public void executeCleanup(String sessionId) throws Exception {
+        post("/api/cleanup/execute/" + sessionId, "");
+    }
+
+    public void undoCleanup(String sessionId) throws Exception {
+        post("/api/cleanup/undo/" + sessionId, "");
+    }
+
+    public List<com.storagehealth.ui.panels.CleanupSessionRow> listCleanupSessions() throws Exception {
+        String response = get("/api/cleanup/sessions");
+        JsonNode root = json.readTree(response);
+        List<com.storagehealth.ui.panels.CleanupSessionRow> rows = new ArrayList<>();
+        for (JsonNode s : root) {
+            rows.add(new com.storagehealth.ui.panels.CleanupSessionRow(
+                s.path("sessionId").asText(),
+                s.path("filesCount").asInt(0),
+                s.path("totalSize").asLong(0),
+                s.path("status").asText()
             ));
         }
         return rows;

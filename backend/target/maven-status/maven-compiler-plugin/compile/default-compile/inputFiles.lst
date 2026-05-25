@@ -1,3 +1,5 @@
+C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\cleanup\CleanupService.java
+C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\cleanup\CleanupServiceImpl.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\duplicate\DuplicateDetector.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\duplicate\DuplicateDetectorImpl.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\hashing\HashingService.java
@@ -5,6 +7,13 @@ C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\st
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\health\HealthScoreCalculator.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\health\HealthScoreCalculatorImpl.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\health\StorageHealthScore.java
+C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\image\ImageAnalysisResult.java
+C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\image\ImageAnalysisService.java
+C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\image\ImageAnalysisServiceImpl.java
+C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\image\NearDuplicateDetector.java
+C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\image\NearDuplicateDetectorImpl.java
+C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\image\PerceptualHashService.java
+C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\image\PerceptualHashServiceImpl.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\ranking\FileRankingService.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\ranking\FileRankingServiceImpl.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\application\service\recommendations\RecommendationEngine.java
@@ -30,9 +39,13 @@ C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\st
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\infrastructure\repository\RecommendationRepository.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\infrastructure\repository\ScanSessionRepository.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\infrastructure\repository\UserFeedbackRepository.java
+C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\CleanupController.java
+C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\dto\CleanupInitiateRequest.java
+C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\dto\CleanupSessionDTO.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\dto\DuplicateAnalysisDTO.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\dto\DuplicateGroupDTO.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\dto\HealthScoreDTO.java
+C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\dto\ImageAnalysisDTO.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\dto\RankedFileDTO.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\dto\RecommendationDTO.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\dto\ScanProgressDTO.java
@@ -40,6 +53,7 @@ C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\st
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\dto\ScanSessionDTO.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\DuplicateController.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\HealthController.java
+C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\ImageAnalysisController.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\RankingController.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\RecommendationController.java
 C:\Users\SAMRUDDHI\OneDrive\Desktop\desktop-project\backend\src\main\java\com\storagehealth\presentation\api\ScanController.java
