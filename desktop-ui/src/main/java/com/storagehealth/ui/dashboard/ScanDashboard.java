@@ -22,8 +22,6 @@ import java.io.File;
  * </ol>
  */
 public class ScanDashboard {
-    private final nebot;
-
     private final VBox root;
     private final ApiClientService api = new ApiClientService();
 
