@@ -1,114 +1,81 @@
-# Storage Health Ranker
+# Storage Health Ranker (Web Version)
 
-> A fully local, AI-powered desktop storage analysis tool built with **Java 21**, **Spring Boot 3.2**, **JavaFX 21**, and **SQLite**.
+Storage Health Ranker has been modernized from a Java desktop application into a full-stack web application.
 
----
+- **Frontend**: Next.js 14, React, Tailwind CSS, Recharts
+- **Backend**: Spring Boot 3.2, Java 21
+- **Database**: PostgreSQL (Supabase)
 
-## Project Structure
+## Key Feature: Browser-based File Scanning
+This application uses the modern **File System Access API** to scan your local storage directly from the browser. No files are uploaded to the server — only metadata (name, size, type, dates) is sent to the backend for analysis.
 
-```
-storage-health-ranker/
-├── pom.xml                    ← Root Maven multi-module POM
-├── backend/                   ← Spring Boot REST + JPA + SQLite
-│   ├── pom.xml
-│   └── src/
-│       ├── main/
-│       │   ├── java/com/storagehealth/
-│       │   │   ├── StorageHealthApplication.java
-│       │   │   ├── config/
-│       │   │   │   └── DatabaseInitializer.java
-│       │   │   ├── domain/entity/         ← JPA entities + enums
-│       │   │   ├── infrastructure/repository/  ← Spring Data repositories
-│       │   │   ├── application/service/
-│       │   │   │   ├── scanner/           ← File-system scanning
-│       │   │   │   ├── hashing/           ← SHA-256 + dPhash (stub)
-│       │   │   │   └── duplicate/         ← Duplicate detection engine
-│       │   │   └── presentation/api/      ← REST controllers + DTOs
-│       │   └── resources/
-│       │       ├── application.yml
-│       │       └── db/migration/V1__initial_schema.sql
-│       └── test/java/                     ← JUnit 5 + Mockito tests
-├── desktop-ui/                ← JavaFX UI (Phase 2)
-│   └── pom.xml
-├── docs/
-└── README.md
-```
+*Note: This feature is only supported in Chrome and Edge.*
 
----
+## Local Development
 
-## Prerequisites
+### 1. Database Setup
+The backend requires a PostgreSQL database. The easiest way to get one for free is to use [Supabase](https://supabase.com).
+1. Create a Supabase project.
+2. Get the connection string from Settings > Database.
+3. Set the following environment variables in your terminal before running the backend:
+   ```bash
+   export DB_URL="jdbc:postgresql://db.<your-project>.supabase.co:5432/postgres"
+   export DB_USERNAME="postgres"
+   export DB_PASSWORD="your-password"
+   ```
 
-| Tool        | Version  |
-|-------------|----------|
-| Java (JDK)  | 21+      |
-| Maven       | 3.9+     |
-
----
-
-## Quick Start
-
+### 2. Run the Backend
 ```bash
-# 1. Clone / open the project
-cd storage-health-ranker
-
-# 2. Build all modules
-mvn clean install -DskipTests
-
-# 3. Run the backend
 cd backend
 mvn spring-boot:run
 ```
+Flyway will automatically create the schema (`V1` to `V4`) on the first run. The API runs on `http://localhost:8080`.
 
-The first startup will:
-1. Create `~/.storage-health/database.db` (SQLite)
-2. Create `~/.storage-health/logs/app.log`
-3. Run the V1 schema migration automatically
-
----
-
-## REST API (Phase 1)
-
-### Scan Endpoints
-
-| Method | Path                          | Description                        |
-|--------|-------------------------------|------------------------------------|
-| POST   | `/api/scan/start`             | Start a new scan (async)           |
-| GET    | `/api/scan/progress/{id}`     | Poll scan progress                 |
-| POST   | `/api/scan/cancel/{id}`       | Request scan cancellation          |
-| GET    | `/api/scan/list`              | Paginated list of all sessions     |
-| GET    | `/api/scan/{id}`              | Get single session by ID           |
-
-**Start scan request body:**
-```json
-{ "path": "C:\\Users\\YourName\\Documents", "name": "My first scan" }
-```
-
-### Duplicate Endpoints
-
-| Method | Path                                | Description                        |
-|--------|-------------------------------------|------------------------------------|
-| POST   | `/api/duplicates/detect/{sessionId}`| Run duplicate detection            |
-| GET    | `/api/duplicates/recommendations`   | List duplicate recommendations     |
-
----
-
-## Running Tests
-
+### 3. Run the Frontend
 ```bash
-# From the project root
-mvn test
-
-# Or for the backend only
-cd backend && mvn test
+cd web-frontend
+npm install
+npm run dev
 ```
+Open `http://localhost:3000` in your browser.
 
----
+## AWS Deployment Guide
 
-## Implementation Phases
+### Backend (AWS Elastic Beanstalk)
+1. Build the backend JAR:
+   ```bash
+   mvn clean package -DskipTests
+   ```
+2. Create an AWS Elastic Beanstalk environment (Platform: Java 21).
+3. Upload the `Dockerfile` and the `target/backend-*.jar` file.
+4. In Elastic Beanstalk Configuration > Software, set the environment variables:
+   - `DB_URL`
+   - `DB_USERNAME`
+   - `DB_PASSWORD`
+   - `CORS_ALLOWED_ORIGINS` (set this to your Next.js domain, e.g., `https://main.xxxx.amplifyapp.com`)
 
-| Phase | Focus                          | Status      |
-|-------|--------------------------------|-------------|
-| 1     | Foundation & Core Scanning     | ✅ Complete |
-| 2     | Ranking Engine & Dashboard     | 🔲 Pending  |
-| 3     | AI & Image Analysis            | 🔲 Pending  |
-| 4     | Cleanup & Safety               | 🔲 Pending  |
+### Frontend (AWS Amplify)
+1. Push your code to GitHub.
+2. Go to AWS Amplify Console > Create new app > Host web app.
+3. Connect your GitHub repository.
+4. Set the build command to:
+   ```yaml
+   version: 1
+   frontend:
+     phases:
+       preBuild:
+         commands:
+           - cd web-frontend
+           - npm ci
+       build:
+         commands:
+           - npm run build
+     artifacts:
+       baseDirectory: web-frontend/.next
+       files:
+         - '**/*'
+     cache:
+       paths:
+         - web-frontend/node_modules/**/*
+   ```
+5. In Amplify Environment Variables, set `NEXT_PUBLIC_API_URL` to your Elastic Beanstalk API URL (e.g., `http://my-env.eba-xxxx.us-east-1.elasticbeanstalk.com`).

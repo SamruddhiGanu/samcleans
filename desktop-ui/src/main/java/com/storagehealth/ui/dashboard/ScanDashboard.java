@@ -1,6 +1,7 @@
 package com.storagehealth.ui.dashboard;
 
 import com.storagehealth.ui.service.ApiClientService;
+import com.storagehealth.ui.SessionContext;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -211,8 +212,12 @@ public class ScanDashboard {
                 }
 
                 final Long finalSessionId = currentSessionId;
+                // Push session ID to shared context so other tabs update automatically
+                SessionContext.get().setSessionId(finalSessionId);
+                // Auto-generate recommendations in background
+                try { api.generateRecommendations(finalSessionId); } catch (Exception ignored) {}
                 Platform.runLater(() -> {
-                    setStatus("✔ Scan complete.", "status-ok");
+                    setStatus("✔ Scan complete — Session " + finalSessionId, "status-ok");
                     startBtn.setDisable(false);
                     cancelBtn.setDisable(true);
                     progressBar.setVisible(false);

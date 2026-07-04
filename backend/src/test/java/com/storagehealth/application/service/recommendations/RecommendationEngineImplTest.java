@@ -3,6 +3,8 @@ package com.storagehealth.application.service.recommendations;
 import com.storagehealth.domain.entity.*;
 import com.storagehealth.infrastructure.repository.FileRepository;
 import com.storagehealth.infrastructure.repository.RecommendationRepository;
+import com.storagehealth.application.service.image.ImageAnalysisService;
+import com.storagehealth.application.service.image.PerceptualHashService;
 import org.junit.jupiter.api.*;
 import org.mockito.*;
 
@@ -20,6 +22,8 @@ class RecommendationEngineImplTest {
 
     @Mock FileRepository fileRepository;
     @Mock RecommendationRepository recommendationRepository;
+    @Mock ImageAnalysisService imageAnalysisService;
+    @Mock PerceptualHashService perceptualHashService;
     @InjectMocks RecommendationEngineImpl engine;
 
     private AutoCloseable mocks;

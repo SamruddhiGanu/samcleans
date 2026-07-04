@@ -171,26 +171,34 @@ public class FileScannerImpl implements FileScanner {
 
     private void processFile(Path filePath, BasicFileAttributes attrs, ScanSessionEntity session) {
         try {
-            // Idempotency: skip already-indexed files
-            if (fileRepository.findByPath(filePath.toString()).isPresent()) {
-                log.debug("Already indexed, skipping: {}", filePath);
-                return;
+            // Re-associate existing file records with the current session so that
+            // Health / Duplicates / Recommendations always operate on the correct file set.
+            var existing = fileRepository.findByPath(filePath.toString());
+            if (existing.isPresent()) {
+                FileEntity f = existing.get();
+                f.setScanSession(session);
+                // Refresh timestamps from disk in case the file changed
+                f.setModifiedAt(toLocalDateTime(attrs.lastModifiedTime().toInstant()));
+                f.setAccessedAt(toLocalDateTime(attrs.lastAccessTime().toInstant()));
+                f.setSizeBytes(attrs.size());
+                fileRepository.save(f);
+                log.debug("Re-linked existing file to session {}: {}", session.getId(), filePath);
+            } else {
+                FileEntity file = FileEntity.builder()
+                    .path(filePath.toString())
+                    .name(filePath.getFileName().toString())
+                    .extension(getExtension(filePath))
+                    .mimeType(getMimeType(filePath))
+                    .sizeBytes(attrs.size())
+                    .fileType(determineFileType(filePath))
+                    .createdAt(toLocalDateTime(attrs.creationTime().toInstant()))
+                    .modifiedAt(toLocalDateTime(attrs.lastModifiedTime().toInstant()))
+                    .accessedAt(toLocalDateTime(attrs.lastAccessTime().toInstant()))
+                    .scanSession(session)
+                    .build();
+                fileRepository.save(file);
+                log.debug("Indexed new file under session {}: {}", session.getId(), filePath);
             }
-
-            FileEntity file = FileEntity.builder()
-                .path(filePath.toString())
-                .name(filePath.getFileName().toString())
-                .extension(getExtension(filePath))
-                .mimeType(getMimeType(filePath))
-                .sizeBytes(attrs.size())
-                .fileType(determineFileType(filePath))
-                .createdAt(toLocalDateTime(attrs.creationTime().toInstant()))
-                .modifiedAt(toLocalDateTime(attrs.lastModifiedTime().toInstant()))
-                .accessedAt(toLocalDateTime(attrs.lastAccessTime().toInstant()))
-                .scanSession(session)
-                .build();
-
-            fileRepository.save(file);
 
             synchronized (progress) {
                 progress.totalFilesFound++;

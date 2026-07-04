@@ -100,13 +100,10 @@ public class NearDuplicateDetectorImpl implements NearDuplicateDetector {
     }
 
     private void createRecommendation(FileEntity target, FileEntity similarTo, int distance) {
-        // Check idempotency: already have a DUPLICATE / NEAR_DUPLICATE recommendation?
-        // Note: For now we'll just use DUPLICATE as type, with a special explanation.
-        // Or if you want a dedicated enum, we could add NEAR_DUPLICATE. 
-        // Using existing DUPLICATE type to keep enum simple, but clarifying in explanation.
+        // Check idempotency: already have a NEAR_DUPLICATE recommendation?
         
         boolean exists = recommendationRepository.findByFile(target).stream()
-            .anyMatch(r -> r.getType() == RecommendationType.DUPLICATE 
+            .anyMatch(r -> r.getType() == RecommendationType.NEAR_DUPLICATE 
                            && r.getExplanation().contains(similarTo.getName()));
 
         if (exists) return;

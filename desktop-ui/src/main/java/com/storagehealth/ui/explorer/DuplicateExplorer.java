@@ -1,6 +1,7 @@
 package com.storagehealth.ui.explorer;
 
 import com.storagehealth.ui.service.ApiClientService;
+import com.storagehealth.ui.SessionContext;
 import javafx.application.Platform;
 import javafx.beans.property.*;
 import javafx.collections.FXCollections;
@@ -21,6 +22,7 @@ public class DuplicateExplorer {
 
     private TableView<DuplicateGroupRow> table;
     private Label summaryLabel;
+    private TextField sessionField;
 
     public DuplicateExplorer() {
         root = new VBox(14);
@@ -40,6 +42,19 @@ public class DuplicateExplorer {
             toolbar,
             table
         );
+
+        // When dashboard completes a scan, pre-fill the session field automatically
+        SessionContext.get().sessionIdProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal.longValue() > 0) {
+                sessionField.setText(String.valueOf(newVal.longValue()));
+                summaryLabel.setText("Session " + newVal + " ready — click Detect Duplicates.");
+            }
+        });
+        
+        long currentSession = SessionContext.get().getSessionId();
+        if (currentSession > 0) {
+            sessionField.setText(String.valueOf(currentSession));
+        }
     }
 
     public VBox getRoot() { return root; }
@@ -58,9 +73,9 @@ public class DuplicateExplorer {
         Button detectBtn = new Button("🔍  Detect Duplicates");
         detectBtn.getStyleClass().add("btn-primary");
 
-        TextField sessionField = new TextField();
-        sessionField.setPromptText("Session ID");
-        sessionField.setPrefWidth(100);
+        sessionField = new TextField();
+        sessionField.setPromptText("Session ID (auto-filled after scan)");
+        sessionField.setPrefWidth(130);
 
         detectBtn.setOnAction(e -> {
             String idStr = sessionField.getText().trim();

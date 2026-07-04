@@ -1,6 +1,7 @@
 package com.storagehealth.ui.panels;
 
 import com.storagehealth.ui.service.ApiClientService;
+import com.storagehealth.ui.SessionContext;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
@@ -36,6 +37,21 @@ public class RecommendationsPanel {
         VBox.setVgrow(table, Priority.ALWAYS);
 
         root.getChildren().addAll(buildTitle(), summaryLabel, buildToolbar(), buildActionToolbar(), table);
+
+        // Auto-populate and load when session changes from Dashboard
+        SessionContext.get().sessionIdProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal.longValue() > 0) {
+                sessionField.setText(String.valueOf(newVal.longValue()));
+                summaryLabel.setText("Session " + newVal + " ready — loading recommendations…");
+                loadRecommendations(newVal.longValue());
+            }
+        });
+
+        // If a session was already active when this panel was created
+        long existing = SessionContext.get().getSessionId();
+        if (existing > 0) {
+            sessionField.setText(String.valueOf(existing));
+        }
     }
 
     public VBox getRoot() { return root; }

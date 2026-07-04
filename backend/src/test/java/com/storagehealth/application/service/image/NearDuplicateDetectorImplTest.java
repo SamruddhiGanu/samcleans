@@ -62,6 +62,6 @@ class NearDuplicateDetectorImplTest {
 
         // Should save hashes and create recommendations (one for each side)
         verify(hashRepository, times(2)).save(any());
-        verify(recommendationRepository, times(2)).save(argThat(rec -> rec.getType() == RecommendationType.DUPLICATE));
+        verify(recommendationRepository, times(2)).save(argThat(rec -> rec.getType() == RecommendationType.NEAR_DUPLICATE));
     }
 }
