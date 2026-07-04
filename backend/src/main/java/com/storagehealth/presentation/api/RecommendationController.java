@@ -67,7 +67,7 @@ public class RecommendationController {
         if (type != null && !type.isBlank()) {
             try {
                 RecommendationType rType = RecommendationType.valueOf(type.toUpperCase());
-                page = recommendationRepository.findByType(rType, pageable);
+                page = recommendationRepository.findByTypeAndIsActedOnFalse(rType, pageable);
             } catch (IllegalArgumentException e) {
                 log.warn("Unknown recommendation type requested: {}", type);
                 return ResponseEntity.badRequest().build();

@@ -88,7 +88,7 @@ export function FilePicker({ onScanComplete }: FilePickerProps) {
       {progress && isScanningLocal && (
         <div className="mt-6 space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Scanning locally...</span>
+            <span>{progress.status || "Scanning locally..."}</span>
             <span>{progress.scanned.toLocaleString()} files</span>
           </div>
           <div className="h-2 bg-secondary rounded-full overflow-hidden">

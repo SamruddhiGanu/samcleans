@@ -53,4 +53,16 @@ public interface FileRepository extends JpaRepository<FileEntity, Long> {
         )
     """)
     long countDuplicatesForFile(@Param("fileId") Long fileId);
+
+    /**
+     * Returns the total bytes consumed per FileType for the given session.
+     * Result is a list of Object[]{FileType, Long} pairs.
+     */
+    @Query("""
+        SELECT f.fileType, SUM(f.sizeBytes)
+        FROM FileEntity f
+        WHERE f.scanSession = :session
+        GROUP BY f.fileType
+    """)
+    List<Object[]> sumSizeByFileType(@Param("session") ScanSessionEntity session);
 }

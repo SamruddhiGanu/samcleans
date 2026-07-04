@@ -1,10 +1,10 @@
 // API client — mirrors ApiClientService.java but as a browser fetch wrapper
 import type {
   ScanSession, HealthScore, DuplicateAnalysis,
-  Recommendation, RankedFile, CleanupSession, BrowserScanRequest
+  Recommendation, RankedFile, CleanupSession, BrowserScanRequest,
+  FileTypeBreakdown
 } from './types';
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8080';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -52,6 +52,10 @@ export async function cancelScan(id: number): Promise<void> {
 
 export async function getHealthScore(sessionId: number): Promise<HealthScore> {
   return request(`/api/health/score/${sessionId}`);
+}
+
+export async function getBreakdown(sessionId: number): Promise<FileTypeBreakdown> {
+  return request(`/api/health/breakdown/${sessionId}`);
 }
 
 // ── Duplicates ────────────────────────────────────────────────────────────────

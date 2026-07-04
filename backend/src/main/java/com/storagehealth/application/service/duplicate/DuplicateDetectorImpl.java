@@ -97,6 +97,12 @@ public class DuplicateDetectorImpl implements DuplicateDetector {
             for (int i = 1; i < files.size(); i++) {
                 FileEntity duplicate = files.get(i);
 
+                if (recommendationRepository.existsByFileAndTypeAndIsActedOnFalse(
+                        duplicate, RecommendationType.DUPLICATE)) {
+                    log.debug("Duplicate recommendation already exists for file {}", duplicate.getId());
+                    continue;
+                }
+
                 RecommendationEntity rec = RecommendationEntity.builder()
                     .file(duplicate)
                     .type(RecommendationType.DUPLICATE)
@@ -133,6 +139,8 @@ public class DuplicateDetectorImpl implements DuplicateDetector {
                 String hash;
                 if (existing.isPresent()) {
                     hash = existing.get().getHashValue();
+                } else if (file.getSizeBytes() == 0) {
+                    hash = "empty-file";
                 } else {
                     hash = hashingService.sha256Hash(Paths.get(file.getPath()));
                     FileHashEntity hashEntity = FileHashEntity.builder()

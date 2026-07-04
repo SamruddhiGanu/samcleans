@@ -73,11 +73,17 @@ public class DuplicateController {
                 g.getHashValue(),
                 g.getFiles().size(),
                 g.getTotalSize(),
-                g.getRecoverableSpace()))
+                g.getRecoverableSpace(),
+                g.getFiles().stream().map(f -> f.getPath()).collect(Collectors.toList())))
             .collect(Collectors.toList());
+
+        int totalDuplicateFiles = duplicates.stream()
+            .mapToInt(g -> g.getFiles().size())
+            .sum();
 
         return ResponseEntity.ok(DuplicateAnalysisDTO.builder()
             .groupCount(duplicates.size())
+            .totalDuplicateFiles(totalDuplicateFiles)
             .totalRecoverableSpace(totalRecoverable)
             .groups(groupDTOs)
             .build());
@@ -89,7 +95,7 @@ public class DuplicateController {
     @GetMapping("/recommendations")
     public ResponseEntity<Page<RecommendationDTO>> getDuplicateRecommendations(Pageable pageable) {
         return ResponseEntity.ok(
-            recommendationRepository.findByType(RecommendationType.DUPLICATE, pageable)
+            recommendationRepository.findByTypeAndIsActedOnFalse(RecommendationType.DUPLICATE, pageable)
                 .map(this::toDTO)
         );
     }

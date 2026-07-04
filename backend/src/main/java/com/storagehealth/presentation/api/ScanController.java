@@ -2,6 +2,7 @@ package com.storagehealth.presentation.api;
 
 import com.storagehealth.application.service.scanner.FileScanner;
 import com.storagehealth.domain.entity.*;
+import com.storagehealth.infrastructure.repository.FileHashRepository;
 import com.storagehealth.infrastructure.repository.FileRepository;
 import com.storagehealth.infrastructure.repository.ScanSessionRepository;
 import com.storagehealth.presentation.api.dto.*;
@@ -38,14 +39,17 @@ public class ScanController {
     private final FileScanner           fileScanner;
     private final ScanSessionRepository scanSessionRepository;
     private final FileRepository        fileRepository;
+    private final FileHashRepository    fileHashRepository;
 
     @Autowired
     public ScanController(FileScanner fileScanner,
                           ScanSessionRepository scanSessionRepository,
-                          FileRepository fileRepository) {
+                          FileRepository fileRepository,
+                          FileHashRepository fileHashRepository) {
         this.fileScanner           = fileScanner;
         this.scanSessionRepository = scanSessionRepository;
         this.fileRepository        = fileRepository;
+        this.fileHashRepository    = fileHashRepository;
     }
 
     // ---------------------------------------------------------------
@@ -123,6 +127,7 @@ public class ScanController {
         for (BrowserFileMetadata meta : files) {
             try {
                 String fullPath = request.getRootPath() + "/" + meta.getPath();
+                FileEntity file;
 
                 var existing = fileRepository.findByPath(fullPath);
                 if (existing.isPresent()) {
@@ -132,13 +137,13 @@ public class ScanController {
                     if (meta.getLastModifiedMs() > 0) {
                         f.setModifiedAt(toLocalDateTime(meta.getLastModifiedMs()));
                     }
-                    fileRepository.save(f);
+                    file = fileRepository.save(f);
                 } else {
                     String ext = extractExtension(meta.getName());
                     LocalDateTime modTime = meta.getLastModifiedMs() > 0
                         ? toLocalDateTime(meta.getLastModifiedMs()) : null;
 
-                    FileEntity file = FileEntity.builder()
+                    FileEntity newFile = FileEntity.builder()
                         .path(fullPath)
                         .name(meta.getName())
                         .extension(ext)
@@ -150,8 +155,26 @@ public class ScanController {
                         .scanSession(finalSession)
                         .build();
 
-                    fileRepository.save(file);
+                    file = fileRepository.save(newFile);
                 }
+
+                // If browser computed the SHA-256 hash, save it now so duplicate detector doesn't need to read the file
+                if (meta.getSha256Hash() != null && !meta.getSha256Hash().isBlank()) {
+                    var existingHash = fileHashRepository.findByFileAndHashType(file, HashType.SHA256);
+                    if (existingHash.isEmpty()) {
+                        FileHashEntity hashEntity = FileHashEntity.builder()
+                            .file(file)
+                            .hashType(HashType.SHA256)
+                            .hashValue(meta.getSha256Hash())
+                            .build();
+                        fileHashRepository.save(hashEntity);
+                    } else if (!meta.getSha256Hash().equals(existingHash.get().getHashValue())) {
+                        FileHashEntity hashEntity = existingHash.get();
+                        hashEntity.setHashValue(meta.getSha256Hash());
+                        fileHashRepository.save(hashEntity);
+                    }
+                }
+
                 indexed++;
             } catch (Exception e) {
                 log.warn("Failed to index browser file: {}", meta.getPath(), e);

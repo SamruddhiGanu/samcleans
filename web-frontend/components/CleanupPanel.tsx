@@ -55,7 +55,7 @@ export function CleanupPanel({ sessions, isLoading, onExecute, onUndo }: Props) 
                 <td className="px-6 py-4">
                   <span className={cn(
                     "px-2.5 py-1 rounded-full text-xs font-medium border",
-                    session.status === 'PENDING' ? "bg-amber-400/10 text-amber-400 border-amber-400/20" :
+                    session.status === 'ACTIVE' ? "bg-amber-400/10 text-amber-400 border-amber-400/20" :
                     session.status === 'COMPLETED' ? "bg-emerald-400/10 text-emerald-400 border-emerald-400/20" :
                     "bg-secondary text-muted-foreground border-border"
                   )}>
@@ -68,7 +68,7 @@ export function CleanupPanel({ sessions, isLoading, onExecute, onUndo }: Props) 
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
-                    {session.status === 'PENDING' && (
+                    {session.status === 'ACTIVE' && (
                       <button 
                         onClick={() => onExecute(session.sessionId)}
                         className="flex items-center gap-1.5 text-primary hover:text-primary-foreground font-medium text-xs px-3 py-1.5 rounded-md hover:bg-primary/20 transition-colors"

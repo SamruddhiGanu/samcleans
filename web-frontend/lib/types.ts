@@ -1,5 +1,10 @@
 // Shared TypeScript types matching the Spring Boot DTOs
 
+export interface FileTypeBreakdown {
+  sizeByType: Record<string, number>; // e.g. { IMAGE: 1048576, VIDEO: 524288 }
+  totalSize: number;
+}
+
 export interface ScanSession {
   id: number;
   sessionName: string;
@@ -29,8 +34,8 @@ export interface DuplicateGroup {
 
 export interface DuplicateAnalysis {
   sessionId: number;
-  totalGroups: number;
-  totalDuplicateFiles: number;
+  groupCount: number;          // renamed from totalGroups — matches backend field
+  totalDuplicateFiles: number; // sum of all fileCount in groups
   totalRecoverableSpace: number;
   groups: DuplicateGroup[];
 }
@@ -68,6 +73,7 @@ export interface BrowserFileMetadata {
   sizeBytes: number;
   lastModifiedMs: number;
   mimeType: string;
+  sha256Hash?: string;
 }
 
 export interface BrowserScanRequest {

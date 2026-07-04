@@ -7,7 +7,7 @@ import { getRecommendations, initiateCleanup } from "@/lib/api";
 import type { Recommendation } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const FILTER_TYPES = ["ALL", "TEMP_FILE", "OLD_SCREENSHOT", "UNUSED_LARGE_FILE", "STALE_DOWNLOAD"];
+const FILTER_TYPES = ["ALL", "DUPLICATE", "TEMP_FILE", "OLD_SCREENSHOT", "UNUSED_LARGE_FILE", "STALE_DOWNLOAD"];
 
 export default function RecommendationsPage() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);

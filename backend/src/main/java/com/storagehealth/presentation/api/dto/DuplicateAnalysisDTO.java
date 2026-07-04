@@ -11,6 +11,7 @@ import java.util.List;
 @AllArgsConstructor
 public class DuplicateAnalysisDTO {
     private int groupCount;
+    private int totalDuplicateFiles;
     private long totalRecoverableSpace;
     private List<DuplicateGroupDTO> groups;
 }

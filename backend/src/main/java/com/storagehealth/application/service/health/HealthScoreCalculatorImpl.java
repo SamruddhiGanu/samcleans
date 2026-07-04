@@ -1,6 +1,7 @@
 package com.storagehealth.application.service.health;
 
 import com.storagehealth.domain.entity.*;
+import com.storagehealth.infrastructure.repository.FileHashRepository;
 import com.storagehealth.infrastructure.repository.FileRepository;
 import com.storagehealth.infrastructure.repository.RecommendationRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -8,8 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -26,12 +29,15 @@ import java.util.stream.Collectors;
 public class HealthScoreCalculatorImpl implements HealthScoreCalculator {
 
     private final FileRepository fileRepository;
+    private final FileHashRepository fileHashRepository;
     private final RecommendationRepository recommendationRepository;
 
     @Autowired
     public HealthScoreCalculatorImpl(FileRepository fileRepository,
+                                     FileHashRepository fileHashRepository,
                                      RecommendationRepository recommendationRepository) {
         this.fileRepository           = fileRepository;
+        this.fileHashRepository       = fileHashRepository;
         this.recommendationRepository = recommendationRepository;
     }
 
@@ -56,7 +62,7 @@ public class HealthScoreCalculatorImpl implements HealthScoreCalculator {
         }
 
         long totalSize       = files.stream().mapToLong(FileEntity::getSizeBytes).sum();
-        long duplicateWaste  = calculateDuplicateWaste();
+        long duplicateWaste  = calculateDuplicateWaste(files);
         long clutteredSize   = calculateClutteredSize(files);
         long tempSize        = clutteredSize; // temp files are the clutter for now
         double orgScore      = calculateOrganizationScore(files);
@@ -96,12 +102,63 @@ public class HealthScoreCalculatorImpl implements HealthScoreCalculator {
     // Private helpers
     // ---------------------------------------------------------------
 
-    /** Total bytes consumed by files flagged as DUPLICATE recommendations. */
-    private long calculateDuplicateWaste() {
-        return recommendationRepository.findByType(RecommendationType.DUPLICATE).stream()
+    /** Total bytes recoverable from confirmed duplicate hashes in this scan session. */
+    private long calculateDuplicateWaste(List<FileEntity> files) {
+        // Phase 1: Use stored SHA-256 hashes to identify exact duplicates
+        // This is accurate for files the browser or backend actually hashed.
+        Set<Long> alreadyAccountedIds = new java.util.HashSet<>();
+
+        Map<String, List<FileEntity>> hashGroups = files.stream()
+            .flatMap(file -> hashesForFile(file).stream()
+                .filter(hash -> hash.getHashType() == HashType.SHA256)
+                .map(hash -> Map.entry(hash.getHashValue(), file)))
+            .collect(Collectors.groupingBy(
+                Map.Entry::getKey,
+                Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
+
+        long hashWaste = 0L;
+        for (List<FileEntity> group : hashGroups.values()) {
+            if (group.size() > 1) {
+                long total   = group.stream().mapToLong(FileEntity::getSizeBytes).sum();
+                long keepOne = group.stream().mapToLong(FileEntity::getSizeBytes).max().orElse(0L);
+                hashWaste += (total - keepOne);
+                group.forEach(f -> alreadyAccountedIds.add(f.getId()));
+            }
+        }
+
+        // Phase 2: Size-based duplicate detection for files without stored hashes.
+        // For browser scans, the front-end only hashes files that share a size, but
+        // there may be files whose hashes were not submitted (e.g. too large, or
+        // skipped due to errors). Files with the same non-zero size are conservatively
+        // counted as *potential* duplicates contributing to waste.
+        Map<Long, List<FileEntity>> sizeGroups = files.stream()
+            .filter(f -> f.getSizeBytes() > 0)
+            .filter(f -> !alreadyAccountedIds.contains(f.getId()))
+            .collect(Collectors.groupingBy(FileEntity::getSizeBytes));
+
+        long sizeWaste = sizeGroups.values().stream()
+            .filter(group -> group.size() > 1)
+            .mapToLong(group -> {
+                // Keep one copy — the rest is recoverable waste
+                long singleCopySize = group.get(0).getSizeBytes();
+                return singleCopySize * (group.size() - 1);
+            })
+            .sum();
+
+        // Also count already-actioned duplicate recommendations
+        long recommendationWaste = recommendationRepository.findByType(RecommendationType.DUPLICATE).stream()
             .filter(r -> r.getFile() != null)
+            .filter(r -> files.contains(r.getFile()))
+            .filter(r -> !Boolean.TRUE.equals(r.getIsActedOn()))
             .mapToLong(r -> r.getFile().getSizeBytes())
             .sum();
+
+        return Math.max(hashWaste + sizeWaste, recommendationWaste);
+    }
+
+    private List<FileHashEntity> hashesForFile(FileEntity file) {
+        List<FileHashEntity> hashes = fileHashRepository.findByFile(file);
+        return hashes != null ? hashes : Collections.emptyList();
     }
 
     /** Total bytes consumed by TEMPORARY-type files. */

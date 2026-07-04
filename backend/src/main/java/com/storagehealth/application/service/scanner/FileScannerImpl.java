@@ -55,6 +55,7 @@ public class FileScannerImpl implements FileScanner {
     private final FileRepository fileRepository;
     private final ScanSessionRepository sessionRepository;
     private final ExecutorService executorService;
+    private final org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
 
     // ---------------------------------------------------------------
     // State (reset per scan)
@@ -64,9 +65,11 @@ public class FileScannerImpl implements FileScanner {
 
     @Autowired
     public FileScannerImpl(FileRepository fileRepository,
-                           ScanSessionRepository sessionRepository) {
+                           ScanSessionRepository sessionRepository,
+                           org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate) {
         this.fileRepository = fileRepository;
         this.sessionRepository = sessionRepository;
+        this.kafkaTemplate = kafkaTemplate;
         this.executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
     }
 
@@ -182,6 +185,18 @@ public class FileScannerImpl implements FileScanner {
                 f.setAccessedAt(toLocalDateTime(attrs.lastAccessTime().toInstant()));
                 f.setSizeBytes(attrs.size());
                 fileRepository.save(f);
+
+                com.storagehealth.domain.event.FileDiscoveredEvent event = com.storagehealth.domain.event.FileDiscoveredEvent.builder()
+                    .fileId(f.getId())
+                    .scanSessionId(session.getId())
+                    .path(f.getPath())
+                    .name(f.getName())
+                    .sizeBytes(f.getSizeBytes())
+                    .mimeType(f.getMimeType())
+                    .extension(f.getExtension())
+                    .build();
+                kafkaTemplate.send("file-discovered-topic", f.getId().toString(), event);
+                
                 log.debug("Re-linked existing file to session {}: {}", session.getId(), filePath);
             } else {
                 FileEntity file = FileEntity.builder()
@@ -197,6 +212,18 @@ public class FileScannerImpl implements FileScanner {
                     .scanSession(session)
                     .build();
                 fileRepository.save(file);
+                
+                com.storagehealth.domain.event.FileDiscoveredEvent event = com.storagehealth.domain.event.FileDiscoveredEvent.builder()
+                    .fileId(file.getId())
+                    .scanSessionId(session.getId())
+                    .path(file.getPath())
+                    .name(file.getName())
+                    .sizeBytes(file.getSizeBytes())
+                    .mimeType(file.getMimeType())
+                    .extension(file.getExtension())
+                    .build();
+                kafkaTemplate.send("file-discovered-topic", file.getId().toString(), event);
+                
                 log.debug("Indexed new file under session {}: {}", session.getId(), filePath);
             }
 

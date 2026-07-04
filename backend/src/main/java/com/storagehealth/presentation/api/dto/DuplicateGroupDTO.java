@@ -2,6 +2,8 @@ package com.storagehealth.presentation.api.dto;
 
 import lombok.*;
 
+import java.util.List;
+
 /** Summary of one group of duplicate files sharing the same hash. */
 @Data
 @NoArgsConstructor
@@ -11,4 +13,5 @@ public class DuplicateGroupDTO {
     private int fileCount;
     private long totalSize;
     private long recoverableSpace;
+    private List<String> filePaths;
 }

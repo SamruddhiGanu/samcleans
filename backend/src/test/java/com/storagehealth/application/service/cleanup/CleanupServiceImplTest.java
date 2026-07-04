@@ -3,6 +3,7 @@ package com.storagehealth.application.service.cleanup;
 import com.storagehealth.domain.entity.*;
 import com.storagehealth.infrastructure.repository.CleanupSessionRepository;
 import com.storagehealth.infrastructure.repository.FileRepository;
+import com.storagehealth.infrastructure.repository.RecommendationRepository;
 import com.storagehealth.presentation.api.dto.CleanupSessionDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,11 +31,14 @@ class CleanupServiceImplTest {
     @Mock
     private FileRepository fileRepository;
 
+    @Mock
+    private RecommendationRepository recommendationRepository;
+
     private CleanupServiceImpl cleanupService;
 
     @BeforeEach
     void setUp() {
-        cleanupService = new CleanupServiceImpl(sessionRepository, fileRepository);
+        cleanupService = new CleanupServiceImpl(sessionRepository, fileRepository, recommendationRepository);
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.storagehealth.application.service.health;
 
 import com.storagehealth.domain.entity.*;
+import com.storagehealth.infrastructure.repository.FileHashRepository;
 import com.storagehealth.infrastructure.repository.FileRepository;
 import com.storagehealth.infrastructure.repository.RecommendationRepository;
 import org.junit.jupiter.api.*;
@@ -18,6 +19,7 @@ import static org.mockito.Mockito.*;
 class HealthScoreCalculatorImplTest {
 
     @Mock FileRepository fileRepository;
+    @Mock FileHashRepository fileHashRepository;
     @Mock RecommendationRepository recommendationRepository;
     @InjectMocks HealthScoreCalculatorImpl calculator;
 
@@ -96,6 +98,26 @@ class HealthScoreCalculatorImplTest {
     }
 
     @Test
+    @DisplayName("Duplicate waste is calculated from matching file hashes in the current session")
+    void duplicateWaste_usesSessionHashes() {
+        ScanSessionEntity session = session(5L);
+        FileEntity image1 = file(FileType.IMAGE, 2_000_000L);
+        FileEntity image2 = file(FileType.IMAGE, 2_000_000L);
+        FileEntity other = file(FileType.IMAGE, 3_000_000L);
+
+        when(fileRepository.findByScanSession(session)).thenReturn(List.of(image1, image2, other));
+        when(fileHashRepository.findByFile(image1)).thenReturn(List.of(hash(image1, "same-image")));
+        when(fileHashRepository.findByFile(image2)).thenReturn(List.of(hash(image2, "same-image")));
+        when(fileHashRepository.findByFile(other)).thenReturn(List.of(hash(other, "different-image")));
+        when(recommendationRepository.findByType(RecommendationType.DUPLICATE)).thenReturn(List.of());
+
+        StorageHealthScore score = calculator.calculateHealthScore(session);
+
+        assertThat(score.getDuplicateWaste()).isEqualTo(2_000_000L);
+        assertThat(Math.round(100 - score.getDuplicateWasteScore())).isEqualTo(29L);
+    }
+
+    @Test
     @DisplayName("Clutter (TEMPORARY files) lowers the clutter sub-score")
     void clutterFiles_lowerClutterScore() {
         ScanSessionEntity session = session(4L);
@@ -161,6 +183,14 @@ class HealthScoreCalculatorImplTest {
             .path("/data/folder-" + (idSeq % 4) + "/f-" + idSeq)
             .sizeBytes(sizeBytes)
             .fileType(type)
+            .build();
+    }
+
+    private FileHashEntity hash(FileEntity file, String value) {
+        return FileHashEntity.builder()
+            .file(file)
+            .hashType(HashType.SHA256)
+            .hashValue(value)
             .build();
     }
 

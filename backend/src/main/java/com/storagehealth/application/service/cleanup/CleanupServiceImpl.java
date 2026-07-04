@@ -6,6 +6,7 @@ import com.storagehealth.domain.entity.CleanupStatus;
 import com.storagehealth.domain.entity.FileEntity;
 import com.storagehealth.infrastructure.repository.CleanupSessionRepository;
 import com.storagehealth.infrastructure.repository.FileRepository;
+import com.storagehealth.infrastructure.repository.RecommendationRepository;
 import com.storagehealth.presentation.api.dto.CleanupSessionDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,11 +31,15 @@ public class CleanupServiceImpl implements CleanupService {
 
     private final CleanupSessionRepository cleanupSessionRepository;
     private final FileRepository fileRepository;
+    private final RecommendationRepository recommendationRepository;
 
     @Autowired
-    public CleanupServiceImpl(CleanupSessionRepository cleanupSessionRepository, FileRepository fileRepository) {
+    public CleanupServiceImpl(CleanupSessionRepository cleanupSessionRepository,
+                              FileRepository fileRepository,
+                              RecommendationRepository recommendationRepository) {
         this.cleanupSessionRepository = cleanupSessionRepository;
         this.fileRepository = fileRepository;
+        this.recommendationRepository = recommendationRepository;
     }
 
     @Override
@@ -86,13 +91,15 @@ public class CleanupServiceImpl implements CleanupService {
         Path filesPath = sessionPath.resolve("files");
 
         try {
+            Files.createDirectories(filesPath);
             for (CleanupSessionFileEntity file : entity.getFiles()) {
                 Path originalPath = Paths.get(file.getOriginalPath());
-                Path archivedPath = filesPath.resolve(originalPath.getFileName().toString());
+                Path archivedPath = filesPath.resolve(archiveFileName(file, originalPath));
 
                 if (Files.exists(originalPath)) {
-                    Files.move(originalPath, archivedPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                    moveWithFallback(originalPath, archivedPath);
                     file.setArchivedPath(archivedPath.toString());
+                    markRecommendationsActedOn(file.getFile());
                 } else {
                     log.warn("File no longer exists at original path: {}", originalPath);
                 }
@@ -131,8 +138,10 @@ public class CleanupServiceImpl implements CleanupService {
                     Path originalPath = Paths.get(file.getOriginalPath());
 
                     if (Files.exists(archivedPath)) {
-                        Files.createDirectories(originalPath.getParent());
-                        Files.move(archivedPath, originalPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                        if (originalPath.getParent() != null) {
+                            Files.createDirectories(originalPath.getParent());
+                        }
+                        moveWithFallback(archivedPath, originalPath);
                     }
                 }
             }
@@ -162,5 +171,30 @@ public class CleanupServiceImpl implements CleanupService {
                 .totalSize(entity.getTotalSize())
                 .status(entity.getStatus().name())
                 .build();
+    }
+
+    private String archiveFileName(CleanupSessionFileEntity file, Path originalPath) {
+        String fileName = originalPath.getFileName().toString();
+        Long id = file.getFile() != null ? file.getFile().getId() : null;
+        return id != null ? id + "__" + fileName : UUID.randomUUID() + "__" + fileName;
+    }
+
+    private void moveWithFallback(Path source, Path target) throws IOException {
+        try {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException atomicMoveFailure) {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    private void markRecommendationsActedOn(FileEntity file) {
+        if (file == null) return;
+
+        recommendationRepository.findByFile(file).stream()
+                .filter(rec -> !Boolean.TRUE.equals(rec.getIsActedOn()))
+                .forEach(rec -> {
+                    rec.setIsActedOn(true);
+                    recommendationRepository.save(rec);
+                });
     }
 }

@@ -16,4 +16,5 @@ public class BrowserFileMetadata {
     private long   sizeBytes;
     private long   lastModifiedMs; // epoch millis from File.lastModified
     private String mimeType;       // from File.type (may be empty)
+    private String sha256Hash;     // pre-computed by browser (optional)
 }

@@ -21,7 +21,11 @@ public interface RecommendationRepository extends JpaRepository<RecommendationEn
 
     Page<RecommendationEntity> findByType(RecommendationType type, Pageable pageable);
 
+    Page<RecommendationEntity> findByTypeAndIsActedOnFalse(RecommendationType type, Pageable pageable);
+
     List<RecommendationEntity> findByFile(FileEntity file);
+
+    boolean existsByFileAndTypeAndIsActedOnFalse(FileEntity file, RecommendationType type);
 
     List<RecommendationEntity> findByIsActedOnFalse();
 
