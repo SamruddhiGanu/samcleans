@@ -22,7 +22,7 @@ const MAX_FULL_HASH_BYTES = 512 * 1024 * 1024;
 export async function pickAndScanFolder(
   onProgress?: (p: ScanProgress) => void
 ): Promise<{ rootPath: string; files: BrowserFileMetadata[] }> {
-  // @ts-ignore — File System Access API types
+  // @ts-expect-error File System Access API types are not included in the default DOM lib.
   const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
   const rootPath: string = dirHandle.name;
   
@@ -36,6 +36,62 @@ export async function pickAndScanFolder(
     onProgress({ ...progress, status: 'Computing hashes for potential duplicates...' });
   }
 
+  await hashDuplicateCandidates(collected, progress, onProgress);
+
+  // Return just the metadata array
+  const files = collected.map(c => c.meta);
+  return { rootPath, files };
+}
+
+export async function scanFileList(
+  fileList: FileList,
+  onProgress?: (p: ScanProgress) => void
+): Promise<{ rootPath: string; files: BrowserFileMetadata[] }> {
+  const files = Array.from(fileList);
+  if (files.length === 0) {
+    throw new Error("No files selected");
+  }
+
+  const firstPath = getRelativePath(files[0]);
+  const rootPath = firstPath.includes("/") ? firstPath.split("/")[0] : "Selected files";
+  const collected: CollectedFile[] = [];
+  const progress: ScanProgress = {
+    total: files.length,
+    scanned: 0,
+    currentFile: "",
+    status: "Reading selected files..."
+  };
+
+  for (const file of files) {
+    const path = getRelativePath(file);
+    collected.push({
+      meta: {
+        path,
+        name: file.name,
+        sizeBytes: file.size,
+        lastModifiedMs: file.lastModified,
+        mimeType: file.type ?? "",
+      },
+      file
+    });
+    progress.scanned++;
+    progress.currentFile = file.name;
+    onProgress?.({ ...progress });
+  }
+
+  if (onProgress) {
+    onProgress({ ...progress, status: "Computing hashes for potential duplicates..." });
+  }
+
+  await hashDuplicateCandidates(collected, progress, onProgress);
+  return { rootPath, files: collected.map(c => c.meta) };
+}
+
+async function hashDuplicateCandidates(
+  collected: CollectedFile[],
+  progress: ScanProgress,
+  onProgress?: (p: ScanProgress) => void
+): Promise<void> {
   const sizeGroups = new Map<number, CollectedFile[]>();
   for (const item of collected) {
     if (!sizeGroups.has(item.meta.sizeBytes)) {
@@ -45,7 +101,7 @@ export async function pickAndScanFolder(
   }
 
   let hashCount = 0;
-  for (const [size, group] of sizeGroups.entries()) {
+  for (const group of sizeGroups.values()) {
     if (group.length > 1) {
       for (const item of group) {
         try {
@@ -62,10 +118,6 @@ export async function pickAndScanFolder(
   }
 
   console.log(`Computed SHA-256 hashes for ${hashCount} potential duplicate files.`);
-
-  // Return just the metadata array
-  const files = collected.map(c => c.meta);
-  return { rootPath, files };
 }
 
 async function hashPotentialDuplicate(file: File): Promise<string> {
@@ -106,7 +158,7 @@ async function collectFiles(
   onProgress: ((p: ScanProgress) => void) | undefined,
   progress: ScanProgress
 ): Promise<void> {
-  // @ts-ignore
+  // @ts-expect-error FileSystemDirectoryHandle async iteration is supported in Chromium.
   for await (const [name, handle] of dirHandle.entries()) {
     if (name.startsWith('.') || EXCLUDED.has(name)) continue;
 
@@ -144,6 +196,10 @@ const EXCLUDED = new Set([
 
 export function isFileSystemAccessSupported(): boolean {
   return typeof window !== 'undefined' && 'showDirectoryPicker' in window;
+}
+
+export function getRelativePath(file: File): string {
+  return (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
 }
 
 export function formatBytes(bytes: number): string {

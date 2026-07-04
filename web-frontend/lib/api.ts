@@ -40,6 +40,10 @@ export async function getScanSession(id: number): Promise<ScanSession> {
   return request(`/api/scan/${id}`);
 }
 
+export async function sessionExists(id: number): Promise<boolean> {
+  return request(`/api/scan/exists/${id}`);
+}
+
 export async function listScanSessions(page = 0, size = 20): Promise<{ content: ScanSession[]; totalElements: number }> {
   return request(`/api/scan/list?page=${page}&size=${size}`);
 }

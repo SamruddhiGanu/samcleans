@@ -21,7 +21,11 @@ export interface HealthScore {
   duplicateWasteScore: number;
   clutterScore: number;
   organizationScore: number;
-  healthStatus: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR';
+  status: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR' | 'UNKNOWN';
+  totalSize: number;
+  duplicateWaste: number;
+  clutteredSize: number;
+  temporaryFileSize: number;
 }
 
 export interface DuplicateGroup {

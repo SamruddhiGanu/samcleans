@@ -74,7 +74,7 @@ public class AiRecommendationAgent {
                 
                 RecommendationEntity rec = RecommendationEntity.builder()
                     .file(file)
-                    .type(RecommendationType.ARCHIVE) // Map to existing enum
+                    .type(RecommendationType.TEMP_FILE) // Map to existing enum
                     .confidenceScore(new BigDecimal("0.85")) // Default AI confidence
                     .explanation("AI Agent Analysis: " + explanation)
                     .recoverableSpace(file.getSizeBytes())

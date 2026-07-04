@@ -83,8 +83,8 @@ class FileScannerImplTest {
     }
 
     @Test
-    @DisplayName("scanDirectory skips files that are already indexed (idempotency)")
-    void scanDirectory_idempotent() throws Exception {
+    @DisplayName("scanDirectory re-associates existing files with the scan session")
+    void scanDirectory_reAssociatesExistingFiles() throws Exception {
         Path existing = tempDir.resolve("existing.txt");
         Files.createFile(existing);
 
@@ -93,13 +93,15 @@ class FileScannerImplTest {
 
         // Simulate the file is already in the database
         FileEntity alreadySaved = FileEntity.builder()
+            .id(100L)
             .path(existing.toString()).name("existing.txt").sizeBytes(0L).build();
         when(fileRepository.findByPath(existing.toString())).thenReturn(Optional.of(alreadySaved));
 
         scanner.scanDirectory(tempDir.toString(), 3L);
 
-        // save should NOT have been called for the already-indexed file
-        verify(fileRepository, never()).save(any(FileEntity.class));
+        // It should have called save to update the session and timestamps
+        verify(fileRepository, times(1)).save(alreadySaved);
+        assertThat(alreadySaved.getScanSession()).isEqualTo(session);
     }
 
     @Test

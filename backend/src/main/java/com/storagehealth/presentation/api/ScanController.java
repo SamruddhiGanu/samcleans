@@ -1,5 +1,7 @@
 package com.storagehealth.presentation.api;
 
+import com.storagehealth.application.service.duplicate.DuplicateDetector;
+import com.storagehealth.application.service.recommendations.RecommendationEngine;
 import com.storagehealth.application.service.scanner.FileScanner;
 import com.storagehealth.domain.entity.*;
 import com.storagehealth.infrastructure.repository.FileHashRepository;
@@ -40,16 +42,22 @@ public class ScanController {
     private final ScanSessionRepository scanSessionRepository;
     private final FileRepository        fileRepository;
     private final FileHashRepository    fileHashRepository;
+    private final DuplicateDetector     duplicateDetector;
+    private final RecommendationEngine  recommendationEngine;
 
     @Autowired
     public ScanController(FileScanner fileScanner,
                           ScanSessionRepository scanSessionRepository,
                           FileRepository fileRepository,
-                          FileHashRepository fileHashRepository) {
+                          FileHashRepository fileHashRepository,
+                          DuplicateDetector duplicateDetector,
+                          RecommendationEngine recommendationEngine) {
         this.fileScanner           = fileScanner;
         this.scanSessionRepository = scanSessionRepository;
         this.fileRepository        = fileRepository;
         this.fileHashRepository    = fileHashRepository;
+        this.duplicateDetector     = duplicateDetector;
+        this.recommendationEngine  = recommendationEngine;
     }
 
     // ---------------------------------------------------------------
@@ -181,15 +189,19 @@ public class ScanController {
             }
         }
 
-        session.setStatus(ScanStatus.COMPLETED);
-        session.setEndTime(LocalDateTime.now());
         session.setScannedFiles(indexed);
         session.setTotalFiles(files.size());
         session.setTotalSize(files.stream().mapToLong(BrowserFileMetadata::getSizeBytes).sum());
-        scanSessionRepository.save(session);
+        session = scanSessionRepository.save(session);
 
-        log.info("Browser scan complete: session={}, indexed={}", session.getId(), indexed);
-        return ResponseEntity.ok(toDTO(session));
+        runPostScanAnalysis(session);
+
+        session.setStatus(ScanStatus.COMPLETED);
+        session.setEndTime(LocalDateTime.now());
+        final ScanSessionEntity completedSession = scanSessionRepository.save(session);
+
+        log.info("Browser scan complete: session={}, indexed={}", completedSession.getId(), indexed);
+        return ResponseEntity.ok(toDTO(completedSession));
     }
 
     /** Returns a live snapshot of scan progress. */
@@ -226,6 +238,12 @@ public class ScanController {
             .orElse(ResponseEntity.notFound().build());
     }
 
+    /** Lightweight endpoint used by the dashboard to clear stale localStorage sessions. */
+    @GetMapping("/exists/{sessionId}")
+    public ResponseEntity<Boolean> sessionExists(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(scanSessionRepository.existsById(sessionId));
+    }
+
     // ---------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------
@@ -241,6 +259,20 @@ public class ScanController {
             .startTime(e.getStartTime())
             .endTime(e.getEndTime())
             .build();
+    }
+
+    private void runPostScanAnalysis(ScanSessionEntity session) {
+        try {
+            log.info("Running duplicate detection for session {}", session.getId());
+            List<DuplicateDetector.DuplicateGroup> groups = duplicateDetector.findExactDuplicates(session);
+            duplicateDetector.markDuplicates(groups);
+            log.info("Duplicate detection complete for session {}: {} group(s)", session.getId(), groups.size());
+
+            log.info("Generating recommendations for session {}", session.getId());
+            recommendationEngine.generateRecommendations(session);
+        } catch (Exception e) {
+            log.warn("Post-scan analysis failed for session {}: {}", session.getId(), e.getMessage(), e);
+        }
     }
 
     private LocalDateTime toLocalDateTime(long epochMillis) {

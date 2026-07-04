@@ -184,18 +184,20 @@ public class FileScannerImpl implements FileScanner {
                 f.setModifiedAt(toLocalDateTime(attrs.lastModifiedTime().toInstant()));
                 f.setAccessedAt(toLocalDateTime(attrs.lastAccessTime().toInstant()));
                 f.setSizeBytes(attrs.size());
-                fileRepository.save(f);
+                FileEntity saved = fileRepository.save(f);
 
-                com.storagehealth.domain.event.FileDiscoveredEvent event = com.storagehealth.domain.event.FileDiscoveredEvent.builder()
-                    .fileId(f.getId())
-                    .scanSessionId(session.getId())
-                    .path(f.getPath())
-                    .name(f.getName())
-                    .sizeBytes(f.getSizeBytes())
-                    .mimeType(f.getMimeType())
-                    .extension(f.getExtension())
-                    .build();
-                kafkaTemplate.send("file-discovered-topic", f.getId().toString(), event);
+                if (saved != null && saved.getId() != null) {
+                    com.storagehealth.domain.event.FileDiscoveredEvent event = com.storagehealth.domain.event.FileDiscoveredEvent.builder()
+                        .fileId(saved.getId())
+                        .scanSessionId(session.getId())
+                        .path(saved.getPath())
+                        .name(saved.getName())
+                        .sizeBytes(saved.getSizeBytes())
+                        .mimeType(saved.getMimeType())
+                        .extension(saved.getExtension())
+                        .build();
+                    kafkaTemplate.send("file-discovered-topic", saved.getId().toString(), event);
+                }
                 
                 log.debug("Re-linked existing file to session {}: {}", session.getId(), filePath);
             } else {
@@ -211,18 +213,20 @@ public class FileScannerImpl implements FileScanner {
                     .accessedAt(toLocalDateTime(attrs.lastAccessTime().toInstant()))
                     .scanSession(session)
                     .build();
-                fileRepository.save(file);
+                FileEntity saved = fileRepository.save(file);
                 
-                com.storagehealth.domain.event.FileDiscoveredEvent event = com.storagehealth.domain.event.FileDiscoveredEvent.builder()
-                    .fileId(file.getId())
-                    .scanSessionId(session.getId())
-                    .path(file.getPath())
-                    .name(file.getName())
-                    .sizeBytes(file.getSizeBytes())
-                    .mimeType(file.getMimeType())
-                    .extension(file.getExtension())
-                    .build();
-                kafkaTemplate.send("file-discovered-topic", file.getId().toString(), event);
+                if (saved != null && saved.getId() != null) {
+                    com.storagehealth.domain.event.FileDiscoveredEvent event = com.storagehealth.domain.event.FileDiscoveredEvent.builder()
+                        .fileId(saved.getId())
+                        .scanSessionId(session.getId())
+                        .path(saved.getPath())
+                        .name(saved.getName())
+                        .sizeBytes(saved.getSizeBytes())
+                        .mimeType(saved.getMimeType())
+                        .extension(saved.getExtension())
+                        .build();
+                    kafkaTemplate.send("file-discovered-topic", saved.getId().toString(), event);
+                }
                 
                 log.debug("Indexed new file under session {}: {}", session.getId(), filePath);
             }
